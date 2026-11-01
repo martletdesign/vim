@@ -24,5 +24,7 @@ test('tag artifact and release jobs remain disabled and do not submit to stores'
   assert.match(workflow,/uses:\s*\.\/\.github\/workflows\/verify\.yml/);
   assert.match(workflow,/sha256sum --check dist\/SHA256SUMS/);
   assert.match(workflow,/gh release create/);
+  assert.match(workflow,/gh release download/);
+  assert.match(workflow,/cmp dist\/SHA256SUMS/);
   assert.doesNotMatch(workflow,/npm publish|webstore|addons\.mozilla\.org/);
 });

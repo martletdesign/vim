@@ -84,3 +84,10 @@ jobs:
           prerelease=()
           if [[ "$RELEASE_TAG" == *-* ]]; then prerelease=(--prerelease); fi
           gh release create "$RELEASE_TAG" "${archives[@]}" dist/SHA256SUMS --verify-tag --generate-notes "${prerelease[@]}"
+      - name: Re-download and compare the released assets
+        run: |
+          set -euo pipefail
+          mkdir release-check
+          gh release download "$RELEASE_TAG" --dir release-check
+          cmp dist/SHA256SUMS release-check/SHA256SUMS
+          for archive in dist/*.zip; do cmp "$archive" "release-check/${archive##*/}"; done
