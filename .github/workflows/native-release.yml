@@ -1,0 +1,43 @@
+name: Native tag-release artifact rehearsal (disabled proposal)
+on:
+  push:
+    tags: ['v*']
+permissions:
+  contents: read
+jobs:
+  verify:
+    if: ${{ false }}
+    uses: ./.github/workflows/verify.yml
+  package:
+    needs: verify
+    if: ${{ false }}
+    runs-on: ubuntu-latest
+    env:
+      RELEASE_TAG: ${{ github.ref_name }}
+      REF_PROTECTED: ${{ github.ref_protected }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '24.19.0'
+      - name: Verify tag, source identity and production history
+        run: node --input-type=module -e 'import {checkFromEnvironment} from "./scripts/tag-release-policy.mjs"; await checkFromEnvironment(process.env)'
+      - run: npm run build && git diff --exit-code
+      - name: Check native archives and record digests
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          archives=(dist/*.zip)
+          test "${#archives[@]}" -gt 0
+          for archive in "${archives[@]}"; do unzip -t "$archive"; done
+          sha256sum "${archives[@]}" > dist/SHA256SUMS
+      - uses: actions/upload-artifact@v4
+        with:
+          name: native-release-candidate
+          path: |
+            dist/*.zip
+            dist/SHA256SUMS
+          if-no-files-found: error

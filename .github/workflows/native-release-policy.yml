@@ -1,0 +1,14 @@
+name: Native release policy tests
+on:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  policy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: node --test scripts/tag-release-policy.test.mjs
