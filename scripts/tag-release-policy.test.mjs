@@ -18,9 +18,11 @@ test('protected flag, event SHA, first-parent history and unchanged remote tag a
   assert.throws(()=>validateProduction({git:a=>a[0]==='rev-list'?'3'.repeat(40):git(a),tag,sha,protectedRef:'true'}));
   assert.throws(()=>validateProduction({git:a=>a[0]==='ls-remote'?'':git(a),tag,sha,protectedRef:'true'}));
 });
-test('tag artifact jobs remain disabled and cannot publish',async()=>{
+test('tag artifact and release jobs remain disabled and do not submit to stores',async()=>{
   const workflow=await readFile('.github/workflows/native-release.yml','utf8');
-  assert.equal((workflow.match(/if:\s*\$\{\{ false \}\}/g)??[]).length,2);
+  assert.equal((workflow.match(/if:\s*\$\{\{ false \}\}/g)??[]).length,3);
   assert.match(workflow,/uses:\s*\.\/\.github\/workflows\/verify\.yml/);
-  assert.doesNotMatch(workflow,/npm publish|gh release|webstore|addons\.mozilla\.org/);
+  assert.match(workflow,/sha256sum --check dist\/SHA256SUMS/);
+  assert.match(workflow,/gh release create/);
+  assert.doesNotMatch(workflow,/npm publish|webstore|addons\.mozilla\.org/);
 });

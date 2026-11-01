@@ -41,3 +41,46 @@ jobs:
             dist/*.zip
             dist/SHA256SUMS
           if-no-files-found: error
+  release:
+    needs: package
+    if: ${{ false }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      RELEASE_TAG: ${{ github.ref_name }}
+      REF_PROTECTED: ${{ github.ref_protected }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '24.19.0'
+      - uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
+        with:
+          name: native-release-candidate
+          path: dist
+      - name: Verify tag and downloaded artifact
+        run: |
+          set -euo pipefail
+          node --input-type=module -e 'import {checkFromEnvironment} from "./scripts/tag-release-policy.mjs"; await checkFromEnvironment(process.env)'
+          sha256sum --check dist/SHA256SUMS
+      - name: Create new GitHub release without replacing existing assets
+        run: |
+          set -euo pipefail
+          status=$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' \
+            -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/releases/tags/$RELEASE_TAG")
+          if [ "$status" != 404 ]; then
+            echo "Release already exists or lookup failed (HTTP $status); stop for recovery." >&2
+            exit 1
+          fi
+          shopt -s nullglob
+          archives=(dist/*.zip)
+          test "${#archives[@]}" -gt 0
+          prerelease=()
+          if [[ "$RELEASE_TAG" == *-* ]]; then prerelease=(--prerelease); fi
+          gh release create "$RELEASE_TAG" "${archives[@]}" dist/SHA256SUMS --verify-tag --generate-notes "${prerelease[@]}"
