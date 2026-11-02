@@ -12,7 +12,7 @@ test('all native repository identities match their source, tag and private build
 });
 test('protected flag, event SHA, first-parent history and unchanged remote tag are required',()=>{
   const sha='1'.repeat(40),object='2'.repeat(40),tag='v1.2.3';
-  const git=a=>a[0]==='ls-remote'?`${object}\trefs/tags/${tag}`:a[0]==='rev-list'?sha:(a.at(-1).endsWith('^{commit}')||a.at(-1)==='HEAD'?sha:object);
+  const git=a=>a[0]==='ls-remote'?(a.at(-1)==='refs/heads/main'?`${object}\trefs/heads/main`:`${object}\trefs/tags/${tag}`):a[0]==='rev-list'?sha:(a.at(-1).endsWith('^{commit}')||a.at(-1)==='HEAD'?sha:object);
   validateProduction({git,tag,sha,protectedRef:'true'});
   assert.throws(()=>validateProduction({git,tag,sha,protectedRef:'false'}));
   assert.throws(()=>validateProduction({git:a=>a[0]==='rev-list'?'3'.repeat(40):git(a),tag,sha,protectedRef:'true'}));
@@ -56,4 +56,15 @@ test('release shell rejects existing or unavailable releases and verifies exact 
     assert.notEqual(run(verify,env).status,0,'modified release artifact must fail');
     for(const status of ['200','403','500'])assert.notEqual(run(create,{...env,FAKE_STATUS:status}).status,0,`HTTP ${status} must fail closed`);
   }finally{await rm(cwd,{recursive:true,force:true});}
+});
+
+
+test('release refuses a stale or unavailable live production branch',()=>{
+  const sha='1'.repeat(40),main='2'.repeat(40),tag='v1.2.3';
+  const git=a=>a[0]==='ls-remote'?`${main}\t${a.at(-1)}`:a[0]==='rev-list'?sha:(a.at(-1).endsWith('^{commit}')||a.at(-1)==='HEAD'?sha:main);
+  const input={git,tag,sha,protectedRef:'true'};
+  validateProduction(input);
+  for(const advertised of ['',`${'3'.repeat(40)}\trefs/heads/main`,`${main}\trefs/heads/other`,`${main}\trefs/heads/main\n${main}\trefs/heads/main`]){
+    assert.throws(()=>validateProduction({...input,git:a=>a[0]==='ls-remote'&&a.at(-1)==='refs/heads/main'?advertised:git(a)}),/Production main/);
+  }
 });

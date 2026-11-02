@@ -12,6 +12,10 @@ export function validateProduction({git,tag,sha,protectedRef}) {
   if(protectedRef!=='true'||!/^[a-f0-9]{40}$/.test(sha))throw Error('Unprotected tag or invalid SHA');
   const commit=git(['rev-parse',`refs/tags/${tag}^{commit}`]).trim();
   if(commit!==sha||git(['rev-parse','HEAD']).trim()!==sha||!git(['rev-list','--first-parent','refs/remotes/origin/main']).trim().split('\n').includes(sha))throw Error('Tag is not on approved main first-parent history');
+  // Bind the local first-parent proof to the production branch advertised now.
+  const main=git(['rev-parse','refs/remotes/origin/main']).trim();
+  const advertisedMain=git(['ls-remote','--refs','origin','refs/heads/main']).trim().split(/\s+/);
+  if(!/^[a-f0-9]{40}$/.test(main)||advertisedMain.length!==2||advertisedMain[0]!==main||advertisedMain[1]!=='refs/heads/main')throw Error('Production main changed or is unavailable');
   const local=git(['rev-parse',`refs/tags/${tag}`]).trim(), remote=git(['ls-remote','--refs','origin',`refs/tags/${tag}`]).trim().split(/\s+/);
   if(remote.length!==2||remote[0]!==local||remote[1]!==`refs/tags/${tag}`)throw Error('Tag changed or is unavailable');
 }
