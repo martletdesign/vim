@@ -47,7 +47,7 @@ test('release shell rejects existing or unavailable releases and verifies exact 
     await Promise.all(['bin','dist','remote'].map(x=>mkdir(join(cwd,x))));
     await writeFile(join(cwd,'dist','sample.zip'),'expected bytes');
     assert.equal(run('sha256sum dist/sample.zip > dist/SHA256SUMS',{}).status,0);
-    await writeFile(join(cwd,'bin','curl'),'#!/bin/sh\nprintf "%s" "$FAKE_STATUS"\n',{mode:0o755});
+    await writeFile(join(cwd,'bin','node'),'#!/bin/sh\n[ "$1" = scripts/github-release-absent.mjs ] && [ "$FAKE_STATUS" = 404 ]\n',{mode:0o755});
     await writeFile(join(cwd,'bin','gh'),`#!/bin/bash\nset -eu\nif [ "$2" = create ]; then printf '%s\\n' "$@" > "$CAPTURE"; cp dist/* "$REMOTE"/; elif [ "$2" = download ]; then cp "$REMOTE"/* release-check/; else exit 9; fi\n`,{mode:0o755});
     const env={PATH:`${join(cwd,'bin')}:${process.env.PATH}`,RELEASE_TAG:'v1.2.3-beta.1',GITHUB_REPOSITORY:'martletdesign/chrome',GH_TOKEN:'local-placeholder',FAKE_STATUS:'404',CAPTURE:join(cwd,'capture'),REMOTE:join(cwd,'remote')};
     assert.equal(run(create,env).status,0);assert.match(await read(env.CAPTURE,'utf8'),/--prerelease/);

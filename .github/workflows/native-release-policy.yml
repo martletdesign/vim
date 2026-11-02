@@ -11,4 +11,4 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-      - run: node --test scripts/tag-release-policy.test.mjs
+      - run: node --test scripts/tag-release-policy.test.mjs scripts/github-release-absent.test.mjs

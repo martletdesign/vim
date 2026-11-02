@@ -71,13 +71,7 @@ jobs:
       - name: Create new GitHub release without replacing existing assets
         run: |
           set -euo pipefail
-          status=$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' \
-            -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' \
-            "https://api.github.com/repos/$GITHUB_REPOSITORY/releases/tags/$RELEASE_TAG")
-          if [ "$status" != 404 ]; then
-            echo "Release already exists or lookup failed (HTTP $status); stop for recovery." >&2
-            exit 1
-          fi
+          node scripts/github-release-absent.mjs
           shopt -s nullglob
           archives=(dist/*.zip)
           test "${#archives[@]}" -gt 0
