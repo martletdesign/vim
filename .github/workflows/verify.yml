@@ -18,3 +18,4 @@ jobs:
         with:
           name: martlet-vim
           path: dist/
+          retention-days: 7
