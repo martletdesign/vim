@@ -1,5 +1,9 @@
 name: Verify Martlet vim
-on: [push, pull_request]
+on:
+  push:
+    branches: [main, develop, 'release/**', 'hotfix/**']
+    tags: ['**']
+  pull_request:
 permissions:
   contents: read
 jobs:
